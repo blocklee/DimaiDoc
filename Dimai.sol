@@ -132,11 +132,12 @@ library SafeMath {
 }
 
 //  本合约删除了标准库 renounceOwnership() 函数，该合约涉及到资金提取不能丢弃所有者权限
-//  本合约设置了初始费用单价，合约销毁功能，余额提款功能，向指定地址打款功能，费用设置功能，使用付费功能
+//  本合约设置了费用设置功能，使用付费功能，设置了收费账户 manager，合约销毁功能，余额提款功能，从合约向指定地址打款功能
 contract Dimai is Ownable {
+    address private _manager;
     using SafeMath for uint256;
 
-    // 设置初始费用 0.01 meer
+    // 设置使用费用
     uint256 public feeUnit = 0.01 ether;
 
     // 设置用户使用Dimai绘图事件
@@ -145,12 +146,12 @@ contract Dimai is Ownable {
     // 设置收款事件
     event Received(address indexed Sender, uint Amount);
 
-//    constructor() {
-//        console.log("Dimai manager is:", msg.sender);
-//        manager = msg.sender; // 'msg.sender' is sender of current call, contract deployer for a constructor
-//        emit ManagerSet(address(0), manager);
-//    }
+    // 设置 manager 事件
+    event ManagerSet(address indexed oldManager, address indexed newManager);
 
+    constructor() {
+        _manager = msg.sender; // 'msg.sender' is sender of current call, contract deployer for a constructor
+    }
 
     function destroyContract() public onlyOwner {
         //检查是否为合约所有者，不是就报错了
@@ -188,12 +189,35 @@ contract Dimai is Ownable {
         feeUnit = _fee;
     }
 
-    function useDimai(uint256 times) public {
+    function currentFee() external view returns (uint256) {
+        return feeUnit;
+    }
+
+    function changeManager(address newManager) public virtual onlyOwner {
+        require(newManager != address(0), "Ownable: new manager is the zero address");
+        _changeManager(newManager);
+    }
+
+    function _changeManager(address newManager) internal virtual {
+        address oldManager = _manager;
+        _manager = newManager;
+
+        emit ManagerSet(oldManager, newManager);
+    }
+
+    function getManager() external view returns (address) {
+        return _manager;
+    }
+
+    function useDimai(uint256 times) public payable {
         // times 为调用绘图需要叠加的计费倍率，由前端计算计费倍率
         uint256 totalFee = feeUnit.mul(times);
         require(msg.value == totalFee, "Incorrect fee amount");
+
         // use dimai, pay fee to owner
-        payable(_owner).transfer(totalFee);
+//        payable(owner()).transfer(fee);
+        // use dimai, pay fee to _manager
+        payable(_manager).transfer(totalFee);
 
         emit UseDimai(msg.sender, msg.value);
     }
