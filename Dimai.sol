@@ -2,7 +2,6 @@
 
 pragma solidity ^0.8.0;
 
-
 abstract contract Context {
     function _msgSender() internal view virtual returns (address) {
         return msg.sender;
@@ -146,6 +145,12 @@ contract Dimai is Ownable {
     // 设置收款事件
     event Received(address indexed Sender, uint Amount);
 
+//    constructor() {
+//        console.log("Dimai manager is:", msg.sender);
+//        manager = msg.sender; // 'msg.sender' is sender of current call, contract deployer for a constructor
+//        emit ManagerSet(address(0), manager);
+//    }
+
 
     function destroyContract() public onlyOwner {
         //检查是否为合约所有者，不是就报错了
@@ -179,7 +184,7 @@ contract Dimai is Ownable {
         }
     }
 
-    function setFee(uint256 _fee) public isOwner {
+    function setFee(uint256 _fee) public onlyOwner {
         feeUnit = _fee;
     }
 
